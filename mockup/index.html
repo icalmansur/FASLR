@@ -1,0 +1,403 @@
+<title>Agent Office Mockup</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600&family=Nunito:wght@500;700&display=swap">
+<style>
+/* Layout: full-height stage (canvas) with a side panel on desktop, bottom sheet on phones. */
+:root{
+  --cream:#fff6e8; --ink:#4a3b52; --ink2:#7d6b84; --peach:#ffcfb3; --lilac:#d9c8f0; --mint:#bfe8cf; --butter:#ffe9a8; --rose:#ffc3d0;
+  --line:#ead9c6; --card:#fffdf8; --warn:#c2602b;
+  --display:'Fredoka','Trebuchet MS',sans-serif; --body:'Nunito','Segoe UI',sans-serif;
+}
+html,body{height:100%}
+body{margin:0;background:var(--cream);color:var(--ink);font-family:var(--body);font-size:14px;overflow:hidden}
+.app{height:100%;display:grid;grid-template-columns:1fr 340px;grid-template-rows:auto 1fr;}
+header{grid-column:1/3;display:flex;flex-wrap:wrap;gap:8px 14px;align-items:center;padding:10px 16px;background:var(--card);border-bottom:2px solid var(--line)}
+h1{font:600 20px var(--display);margin:0;letter-spacing:.01em}
+.ribbon{font:600 11px var(--display);letter-spacing:.08em;text-transform:uppercase;background:var(--butter);padding:3px 9px;border-radius:99px}
+.legend{display:flex;gap:6px;flex-wrap:wrap;margin-left:auto}
+.pill{font-size:11.5px;font-weight:700;padding:3px 9px;border-radius:99px;border:1.5px solid var(--line);background:#fff;white-space:nowrap}
+.pill.dec{background:#eaf6ee;border-color:#bfe0c9}
+.pill.ver{background:#fdeee6;border-color:#f2c9b2;color:var(--warn)}
+.stage{position:relative;min-width:0;min-height:0;background:linear-gradient(#ffeccf,#fbd9c4)}
+canvas{width:100%;height:100%;display:block;touch-action:none}
+.tools{position:absolute;left:12px;top:12px;display:flex;flex-direction:column;gap:6px}
+.tools button,.dock button,.dpad button{font:600 13px var(--display);border:2px solid var(--line);background:var(--card);color:var(--ink);border-radius:12px;padding:7px 11px;cursor:pointer;box-shadow:0 2px 0 var(--line)}
+.tools button:hover,.dock button:hover,.dpad button:hover{background:#fff}
+.tools button:focus-visible,.dock button:focus-visible,.dpad button:focus-visible,.chip:focus-visible{outline:3px solid var(--lilac);outline-offset:2px}
+.tools button[aria-pressed=true]{background:var(--lilac)}
+.dock{position:absolute;left:12px;bottom:12px;display:flex;gap:6px;flex-wrap:wrap;max-width:calc(100% - 24px)}
+.dock button[disabled]{opacity:.55;cursor:not-allowed}
+.dpad{position:absolute;right:12px;bottom:12px;display:none;grid-template-columns:repeat(3,40px);grid-template-rows:repeat(2,40px);gap:4px}
+.dpad.on{display:grid}
+.dpad button{padding:0;font-size:16px}
+.dpad .u{grid-column:2}.dpad .l{grid-row:2;grid-column:1}.dpad .d{grid-row:2;grid-column:2}.dpad .r{grid-row:2;grid-column:3}
+aside{background:var(--card);border-left:2px solid var(--line);padding:14px 16px;overflow:auto;min-width:0}
+aside h2{font:600 18px var(--display);margin:0 0 2px}
+.sub{color:var(--ink2);margin:0 0 10px;font-weight:700}
+.kv{display:grid;grid-template-columns:auto 1fr;gap:6px 12px;margin:10px 0;font-size:13px}
+.kv dt{color:var(--ink2);font-weight:700}.kv dd{margin:0;min-width:0;overflow-wrap:anywhere}
+.box{background:#fff;border:2px solid var(--line);border-radius:14px;padding:10px 12px;margin:10px 0;font-size:13px;line-height:1.45}
+.box.warn{background:#fdf1ea;border-color:#f2c9b2}
+.chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}
+.chip{font:600 12px var(--display);border:2px solid var(--line);background:#fff;border-radius:99px;padding:4px 10px;cursor:pointer;color:var(--ink)}
+.chip[aria-pressed=true]{background:var(--peach)}
+.foot{font-size:12px;color:var(--ink2);margin-top:12px}
+@media (max-width:760px){
+  .app{grid-template-columns:1fr;grid-template-rows:auto minmax(0,1fr) minmax(0,38%)}
+  header{grid-column:1}
+  aside{border-left:0;border-top:2px solid var(--line)}
+  .legend{margin-left:0}
+  h1{font-size:17px}
+  .tools{flex-direction:row;flex-wrap:wrap;right:12px}
+  .tools button{padding:5px 8px;font-size:12px}
+}
+@media (prefers-reduced-motion:reduce){*{scroll-behavior:auto}}
+</style>
+
+<div class="app">
+  <header>
+    <h1>Agent Office</h1><span class="ribbon">Mockup</span>
+    <div class="legend" aria-label="Legend">
+      <span class="pill dec">Green = decorative life (not real activity)</span>
+      <span class="pill ver">Orange = verified activity (none connected yet)</span>
+    </div>
+  </header>
+  <div class="stage" id="stage">
+    <canvas id="cv" aria-label="Isometric office. Select characters or rooms for details."></canvas>
+    <div class="tools">
+      <button id="rotL" aria-label="Rotate left">⟲ Rotate</button>
+      <button id="rotR" aria-label="Rotate right">⟳ Rotate</button>
+      <button id="zin" aria-label="Zoom in">＋ Zoom</button>
+      <button id="zout" aria-label="Zoom out">－ Zoom</button>
+      <button id="inside" aria-pressed="false">Step inside</button>
+    </div>
+    <div class="dock">
+      <button id="music" disabled title="Arrives in the working build">♪ Lo-fi: off</button>
+      <button id="sfx" disabled title="Arrives in the working build">🔔 Sounds: off</button>
+    </div>
+    <div class="dpad" id="dpad" aria-label="Move through rooms">
+      <button class="u" data-d="u" aria-label="Move up">▲</button>
+      <button class="l" data-d="l" aria-label="Move left">◀</button>
+      <button class="d" data-d="d" aria-label="Move down">▼</button>
+      <button class="r" data-d="r" aria-label="Move right">▶</button>
+    </div>
+  </div>
+  <aside id="panel" aria-live="polite"></aside>
+</div>
+
+<script>
+(function(){
+'use strict';
+var cv=document.getElementById('cv'),ctx=cv.getContext('2d'),stage=document.getElementById('stage'),panel=document.getElementById('panel');
+var TW=64,TH=32,TZ=26,CX=8,CY=5,W=16,D=10;
+var reduce=window.matchMedia&&matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+/* ---------- data (all agent data is SAMPLE; FASLR repo facts were read from the git repo) ---------- */
+var rooms=[
+ {id:'office',name:'Supervisor office',x:0,y:0,w:4,h:4,c:['#e6d9f5','#dccbef'],wall:'#cdb8e8',kind:'You'},
+ {id:'faslr',name:'FASLR room',x:4,y:0,w:5,h:4,c:['#ffe0cc','#ffd4ba'],wall:'#f5b99a',kind:'Project'},
+ {id:'proj2',name:'Sample project B',x:9,y:0,w:4,h:4,c:['#d4f1df','#c6ebd5'],wall:'#9fd7b6',kind:'Project (sample)'},
+ {id:'library',name:'Knowledge library',x:13,y:0,w:3,h:4,c:['#fff0bd','#ffe9a4'],wall:'#f0d27c',kind:'Library'},
+ {id:'cafe',name:'Café',x:0,y:4,w:6,h:6,c:['#ffe4ea','#ffd6df'],wall:'#f5aebd',kind:'Break'},
+ {id:'arcade',name:'Arcade & beanbags',x:6,y:4,w:4,h:6,c:['#dfe4ff','#d0d7fb'],wall:'#aab4f2',kind:'Break'},
+ {id:'garden',name:'Garden',x:10,y:4,w:6,h:6,c:['#cdeebd','#c0e7ad'],wall:'#a8d891',kind:'Break'},
+ {id:'den',name:'Coordination den (basement)',x:6,y:4,w:10,h:6,c:['#3b3550','#352f49'],wall:'#2b2640',kind:'Coordinator',basement:true}
+];
+var roomById={};rooms.forEach(function(r){roomById[r.id]=r});
+
+var agents=[
+ {id:'me',name:'You',role:'Supervisor',who:'person',fur:'#f2cfae',outfit:'#6b7fd6',ear:'none',room:'office',home:[2,1.9],path:[[2,1.9],[2,3.2],[3.2,2.4]],spd:.5,sample:false,
+  ctx:'You own every project room and decide what gets reviewed. Your office shows the review queue once connected.',task:null},
+ {id:'mochi',name:'Mochi',role:'Reserving analyst',who:'Fox',fur:'#f0a05a',outfit:'#ffffff',ear:'point',room:'faslr',home:[6,1.9],path:[[6,1.9],[5.5,2.8],[7.5,2.4]],spd:.45,sample:true,
+  ctx:'Would work in the FASLR room: triangles, chain-ladder methods, expected loss matrix demo.',task:'Sample: "Review expected loss matrix demo"'},
+ {id:'bun',name:'Bun',role:'Peer reviewer',who:'Rabbit',fur:'#f7eef2',outfit:'#9fd7b6',ear:'long',room:'proj2',home:[10.8,2],path:[[10.8,2],[11.5,3],[9.6,3.2],[8.8,2.5],[6.8,3.3],[9.6,3.2]],spd:.9,sample:true,
+  ctx:'Reads other agents’ finished work and signs it off. Walks between rooms to fetch drafts (decorative here).',task:'Sample: "Peer review Q3 reserve memo"'},
+ {id:'olive',name:'Olive',role:'Librarian',who:'Owl',fur:'#c9a77c',outfit:'#e9b44c',ear:'tuft',room:'library',home:[14.5,2.4],path:[[14.5,2.4],[14.5,1.6],[13.8,2.6]],spd:.35,sample:true,
+  ctx:'Looks after your notes and knowledge base. Your notes would appear as books on these shelves.',task:'Sample: "Index new papers"'},
+ {id:'biscuit',name:'Biscuit',role:'Barista',who:'Corgi',fur:'#e8b36f',outfit:'#c9695f',ear:'point',room:'cafe',home:[2.3,5.9],path:[[2.3,5.9],[4,5.9],[3,5.9]],spd:.6,sample:true,
+  ctx:'Runs the café. Pure decoration: no tasks.',task:null},
+ {id:'juniper',name:'Juniper',role:'Data wrangler (on break)',who:'Frog',fur:'#7fcf8c',outfit:'#f7b6c8',ear:'eyes',room:'garden',home:[13,7],path:[[13,7],[12,8.2],[14.4,8],[13,7]],spd:.5,sample:true,
+  ctx:'Cleans and loads datasets. Currently shown on a decorative break in the garden.',task:'Sample: "Load claims extract"'},
+ {id:'shade',name:'Shade',role:'Coordinator',who:'Cat',fur:'#3d3a4d',outfit:'#f2b84b',ear:'point',room:'den',home:[14.4,9.2],path:[[14.4,9.2],[15,7.4],[13.6,9.4]],spd:.4,sample:true,
+  ctx:'Hands out work to the other agents from the basement. Selecting this room brightens the den.',task:'Sample: "Route today’s tasks"',z:-4.9}
+];
+var agentById={};agents.forEach(function(a){a.px=a.home[0];a.py=a.home[1];a.pi=0;a.wait=Math.random()*2;agentById[a.id]=a});
+
+var roomInfo={
+ faslr:{ctx:'Free Actuarial System for Loss Reserving. A PyQt6 frontend for the chainladder package. Latest commit: "FEAT: Move example values to demo." (read from this repo)',files:'Decision board and reviewed-work display will fill as analyses are signed off.'},
+ office:{ctx:'Your office. Review queue, sign-offs and decisions would show here.',files:''},
+ proj2:{ctx:'Placeholder for your second project. Tell me its name and I will label the room.',files:''},
+ library:{ctx:'Storeroom for your notes. Connect Drive or a notes folder in the working build.',files:''},
+ cafe:{ctx:'Break area with barista, espresso bar and tables.',files:''},
+ arcade:{ctx:'Arcade cabinets, board games and beanbags for agents on break.',files:''},
+ garden:{ctx:'Garden with a pond, trees and flower beds.',files:''},
+ den:{ctx:'Coordinator’s shadowy basement, visible under the main floor.',files:''}
+};
+
+/* ---------- camera ---------- */
+var cam={rot:0,zoom:1,px:0,py:0,tz:1,tpx:0,tpy:0,inside:false,sel:null};
+var vw=0,vh=0,dpr=1;
+function resize(){dpr=Math.min(window.devicePixelRatio||1,2);vw=stage.clientWidth;vh=stage.clientHeight;cv.width=vw*dpr;cv.height=vh*dpr;fit()}
+function fitZoom(){return Math.min(vw/((W+D)*TW/2+90),vh/((W+D)*TH/2+TZ*8))}
+function fit(){if(!cam.inside){cam.tz=fitZoom();cam.tpx=0;cam.tpy=0;if(!cam.fitted){cam.zoom=cam.tz;cam.fitted=1}}}
+function rotXY(x,y,r){var dx=x-CX,dy=y-CY;r=(r===undefined?cam.rot:r);return r===0?[dx,dy]:r===1?[-dy,dx]:r===2?[-dx,-dy]:[dy,-dx]}
+function unrot(a,b){var r=cam.rot,dx,dy;if(r===0){dx=a;dy=b}else if(r===1){dx=b;dy=-a}else if(r===2){dx=-a;dy=-b}else{dx=-b;dy=a}return [dx+CX,dy+CY]}
+function P(rx,ry,z){return [vw/2+cam.px+(rx-ry)*TW/2*cam.zoom, vh*0.5+cam.py+((rx+ry)*TH/2-z*TZ+TZ*1.5)*cam.zoom]}
+function PW(x,y,z){var r=rotXY(x,y);return P(r[0],r[1],z)}
+function screenToWorld(sx,sy){var u=(sx-vw/2-cam.px)/cam.zoom,v=(sy-vh*0.5-cam.py)/cam.zoom-TZ*1.5;var a=2*u/TW,b=2*v/TH;return unrot((a+b)/2,(b-a)/2)}
+
+/* ---------- drawing ---------- */
+function shade(hex,f){var n=parseInt(hex.slice(1),16),r=n>>16,g=n>>8&255,b=n&255;function m(c){return Math.max(0,Math.min(255,Math.round(c*f)))}return 'rgb('+m(r)+','+m(g)+','+m(b)+')'}
+function poly(pts,fill){ctx.beginPath();ctx.moveTo(pts[0][0],pts[0][1]);for(var i=1;i<pts.length;i++)ctx.lineTo(pts[i][0],pts[i][1]);ctx.closePath();ctx.fillStyle=fill;ctx.fill()}
+var Q;
+function box(x,y,z,w,d,h,c,dim){
+  var a=rotXY(x,y),b=rotXY(x+w,y+d),rx=Math.min(a[0],b[0]),ry=Math.min(a[1],b[1]),rw=Math.abs(a[0]-b[0]),rd=Math.abs(a[1]-b[1]);
+  Q.push({d:rx+rw+ry+rd+z*.001,f:function(){
+    var k=dim||1,t=[P(rx,ry,z+h),P(rx+rw,ry,z+h),P(rx+rw,ry+rd,z+h),P(rx,ry+rd,z+h)];
+    poly([P(rx,ry+rd,z+h),P(rx+rw,ry+rd,z+h),P(rx+rw,ry+rd,z),P(rx,ry+rd,z)],shade(c,.88*k));
+    poly([P(rx+rw,ry,z+h),P(rx+rw,ry+rd,z+h),P(rx+rw,ry+rd,z),P(rx+rw,ry,z)],shade(c,.74*k));
+    poly(t,shade(c,1.04*k));
+  }});
+}
+function ball(x,y,z,r,c,dim){var p=rotXY(x,y);Q.push({d:p[0]+p[1]+.4,f:function(){var s=P(p[0],p[1],z),rr=r*TW*.5*cam.zoom,k=dim||1;ctx.beginPath();ctx.arc(s[0],s[1],rr,0,7);ctx.fillStyle=shade(c,.85*k);ctx.fill();ctx.beginPath();ctx.arc(s[0]-rr*.2,s[1]-rr*.25,rr*.8,0,7);ctx.fillStyle=shade(c,1.05*k);ctx.fill()}})}
+function tiles(r,dim,z0){
+  var ids=[];for(var i=0;i<r.w;i++)for(var j=0;j<r.h;j++){
+    var a=rotXY(r.x+i,r.y+j),b=rotXY(r.x+i+1,r.y+j+1),rx=Math.min(a[0],b[0]),ry=Math.min(a[1],b[1]);
+    poly([P(rx,ry,z0),P(rx+1,ry,z0),P(rx+1,ry+1,z0),P(rx,ry+1,z0)],shade(r.c[(i+j)&1],dim))}
+}
+function walls(r,dim,z0,hgt){
+  var a=rotXY(r.x,r.y),b=rotXY(r.x+r.w,r.y+r.h),rx=Math.min(a[0],b[0]),ry=Math.min(a[1],b[1]),rw=Math.abs(a[0]-b[0]),rd=Math.abs(a[1]-b[1]);
+  var g1=rotXY(0,0),g2=rotXY(W,D),gx=Math.min(g1[0],g2[0]),gy=Math.min(g1[1],g2[1]);
+  var hx=Math.abs(rx-gx)<.01?hgt:Math.min(hgt,.45),hy=Math.abs(ry-gy)<.01?hgt:Math.min(hgt,.45);
+  Q.push({d:rx+ry-5,f:function(){
+    poly([P(rx,ry,z0+hx),P(rx,ry+rd,z0+hx),P(rx,ry+rd,z0),P(rx,ry,z0)],shade(r.wall,.86*dim));
+    poly([P(rx,ry,z0+hy),P(rx+rw,ry,z0+hy),P(rx+rw,ry,z0),P(rx,ry,z0)],shade(r.wall,.98*dim));
+    var t=.18;poly([P(rx,ry,z0+hy),P(rx+rw,ry,z0+hy),P(rx+rw,ry+t,z0+hy),P(rx,ry+t,z0+hy)],shade(r.wall,1.12*dim));
+    poly([P(rx,ry,z0+hx),P(rx+t,ry,z0+hx),P(rx+t,ry+rd,z0+hx),P(rx,ry+rd,z0+hx)],shade(r.wall,1.12*dim));
+  }});
+}
+function furniture(dimFor){
+  var F=function(rid,x,y,z,w,d,h,c){box(x,y,z,w,d,h,c,dimFor(rid))};
+  /* supervisor office */
+  F('office',.5,.5,0,2.2,1,.7,'#bfa3df');F('office',.9,.55,.7,.9,.12,.55,'#4d4766');F('office',1.2,1.7,0,.8,.8,.45,'#f4a9bd');F('office',3.1,.4,0,.6,.6,.9,'#8fcf9a');F('office',.3,2.9,0,.9,.8,1.5,'#d8b78a');
+  ball(3.4,.7,1.2,.35,'#7fcf8c',dimFor('office'));
+  /* FASLR room */
+  F('faslr',4.5,.5,0,2,1,.7,'#f7a97e');F('faslr',4.8,.55,.7,.9,.12,.55,'#4d4766');F('faslr',7,.5,0,2,1,.7,'#f7a97e');F('faslr',7.3,.55,.7,.9,.12,.55,'#4d4766');
+  F('faslr',5.6,.12,1.5,2.2,.1,1.1,'#fffaf0');F('faslr',5.8,.2,1.75,.5,.08,.5,'#ffc3d0');F('faslr',6.5,.2,1.75,.5,.08,.5,'#bfe8cf');F('faslr',7.1,.2,1.75,.5,.08,.5,'#ffe9a8');
+  F('faslr',8.2,2.8,0,.55,.7,.5,'#e4936a');F('faslr',8.25,2.9,.5,.45,.5,.3,'#8fb7f0');F('faslr',8.3,3.0,.8,.35,.3,.25,'#f6d36b');F('faslr',4.4,3,0,.6,.6,.8,'#8fcf9a');
+  /* project B */
+  F('proj2',9.6,.5,0,2,1,.7,'#8ccaa3');F('proj2',9.9,.55,.7,.9,.12,.55,'#4d4766');F('proj2',11.9,.4,0,.7,.7,.9,'#8fcf9a');F('proj2',11.8,3,0,.8,.7,.4,'#f4a9bd');
+  /* library */
+  F('library',13.2,.15,0,2.6,.5,2.1,'#d8a96a');F('library',13.3,.2,.5,.4,.4,.35,'#e57f84');F('library',13.8,.2,.5,.3,.4,.35,'#6fa8dc');F('library',14.3,.2,.5,.4,.4,.35,'#f6d36b');F('library',13.4,.2,1.2,.5,.4,.35,'#9fd7b6');F('library',14.4,.2,1.2,.3,.4,.35,'#c8a2e8');
+  F('library',15.5,.3,0,.4,2,1.6,'#d8a96a');F('library',14,3.2,0,1.2,.5,.5,'#f4a9bd');
+  /* cafe */
+  F('cafe',.4,4.4,0,.9,4.2,.9,'#f2b8a0');F('cafe',.45,4.5,.9,.6,.5,.4,'#c9ccd4');F('cafe',.45,5.5,.9,.6,.35,.2,'#fff6e8');
+  F('cafe',3.2,6.6,0,.8,.8,.55,'#fff0e0');F('cafe',3.3,6.7,.55,.6,.6,.08,'#f2b8a0');F('cafe',4.6,7.8,0,.8,.8,.55,'#fff0e0');F('cafe',4.7,7.9,.55,.6,.6,.08,'#f2b8a0');
+  F('cafe',1.9,8.8,0,1.2,.8,.4,'#e57f84');F('cafe',.5,9.2,0,.5,.5,.9,'#8fcf9a');
+  /* arcade */
+  F('arcade',6.4,4.3,0,.9,.9,1.8,'#7a8cff');F('arcade',6.5,5.2,.9,.7,.05,.6,'#222');F('arcade',7.5,4.3,0,.9,.9,1.8,'#ff8fb1');F('arcade',8.9,4.4,0,.8,1.2,.5,'#ffd27a');
+  F('arcade',7.2,7.2,0,1.1,1.1,.45,'#ffb3c1');F('arcade',8.5,8.4,0,1.1,1.1,.45,'#b3e2c8');F('arcade',6.4,8.6,0,1,1,.45,'#c8b6ff');
+  /* garden */
+  ball(10.9,5,1.5,.6,'#79c47a',dimFor('garden'));F('garden',10.7,4.8,0,.4,.4,1.3,'#9a7352');
+  ball(15.1,5.2,1.7,.65,'#6dbb78',dimFor('garden'));F('garden',14.9,5,0,.4,.4,1.4,'#9a7352');
+  F('garden',12.3,6.6,0,2,1.4,.12,'#8fc8f0');F('garden',10.4,8.8,0,1.6,.5,.35,'#f4a9bd');F('garden',13.9,9.1,0,1.6,.5,.35,'#ffe08a');F('garden',15.2,7.5,0,.5,.5,.4,'#e57f84');
+}
+function denStuff(dim){
+  var z=-5;
+  var F=function(x,y,zz,w,d,h,c){box(x,y,z+zz,w,d,h,c,dim)};
+  F(7,8.7,0,1,1,1.5,'#5b5478');F(8.2,8.7,0,1,1,1.9,'#5b5478');F(9.4,8.7,0,1,1,1.5,'#5b5478');
+  F(11,8.6,0,2.4,1,.7,'#6d6590');F(11.3,8.65,.7,1,.1,.6,'#8fe0ff');F(12.4,8.65,.7,.8,.1,.6,'#ffd27a');
+  F(15,5.2,0,.8,.8,1.4,'#5b5478');F(15,6.6,0,.8,1.2,.5,'#6d6590');
+  ball(14.2,8.9,z+1.7,.28,'#ffd27a',dim);
+}
+function drawChar(a,t){
+  var z=a.z||0,r=rotXY(a.px,a.py);
+  var dimc=a.room==='den'?(cam.sel==='den'||cam.sel==='shade'?1:.62):1;
+  Q.push({d:r[0]+r[1]+.5+(a.z?-0.5:0),f:function(){
+    var s=P(r[0],r[1],z),k=cam.zoom,bob=reduce?0:Math.sin(t*3+a.pi*2+a.name.length)*(a.moving?2.2:1)*k,u=TW*k/64;
+    var x=s[0],y=s[1]+bob;
+    ctx.save();ctx.translate(x,y);ctx.scale(u,u);
+    ctx.globalAlpha=1;
+    ctx.fillStyle='rgba(60,40,70,.18)';ctx.beginPath();ctx.ellipse(0,0,13,6,0,0,7);ctx.fill();
+    var F=function(c){return shade(c,dimc)};
+    /* body */
+    ctx.fillStyle=F(a.outfit);rr(-9,-26,18,22,7);ctx.fill();
+    ctx.fillStyle=F(a.fur);rr(-8,-5,6,5,2);ctx.fill();rr(2,-5,6,5,2);ctx.fill();
+    /* ears */
+    ctx.fillStyle=F(a.fur);
+    if(a.ear==='point'){tri(-11,-44,-3,-48,-10,-36);tri(11,-44,3,-48,10,-36)}
+    else if(a.ear==='long'){rr(-9,-62,6,22,3);ctx.fill();rr(3,-62,6,22,3);ctx.fill();ctx.fillStyle=F('#f7b6c8');rr(-7.5,-58,3,14,1.5);ctx.fill();rr(4.5,-58,3,14,1.5);ctx.fill();ctx.fillStyle=F(a.fur)}
+    else if(a.ear==='tuft'){tri(-12,-50,-4,-46,-11,-36);tri(12,-50,4,-46,11,-36)}
+    else if(a.ear==='eyes'){ctx.beginPath();ctx.arc(-7,-44,5,0,7);ctx.arc(7,-44,5,0,7);ctx.fill()}
+    else if(a.ear==='none'){ctx.fillStyle=F('#5a3d2e');ctx.beginPath();ctx.arc(0,-40,12.5,Math.PI,0);ctx.fill()}
+    /* head */
+    ctx.fillStyle=F(a.fur);ctx.beginPath();ctx.ellipse(0,-35,12.5,11,0,0,7);ctx.fill();
+    if(a.ear==='none'){ctx.fillStyle=F('#5a3d2e');ctx.beginPath();ctx.ellipse(0,-42,12.5,5,0,Math.PI,0);ctx.fill()}
+    if(a.who==='Fox'||a.who==='Corgi'){ctx.fillStyle=F('#fff4e6');ctx.beginPath();ctx.ellipse(0,-30,8,5.5,0,0,7);ctx.fill()}
+    if(a.who==='Owl'){ctx.fillStyle=F('#fff4e6');ctx.beginPath();ctx.arc(-5,-36,5,0,7);ctx.arc(5,-36,5,0,7);ctx.fill()}
+    /* face */
+    ctx.fillStyle=a.room==='den'?'#fff3b0':'#3b2b3f';
+    var ex=a.dir||0;ctx.beginPath();ctx.arc(-4.5+ex,-35,1.9,0,7);ctx.arc(4.5+ex,-35,1.9,0,7);ctx.fill();
+    ctx.fillStyle=F('#f28aa0');ctx.beginPath();ctx.arc(ex,-31.5,1.6,0,7);ctx.fill();
+    ctx.fillStyle='rgba(255,140,160,.45)';ctx.beginPath();ctx.arc(-8,-31,2.4,0,7);ctx.arc(8,-31,2.4,0,7);ctx.fill();
+    /* outfit detail */
+    if(a.id==='me'){ctx.fillStyle='#fff';tri(-3,-26,3,-26,0,-19);ctx.fillStyle='#f2b84b';star(0,-12,4)}
+    if(a.id==='mochi'){ctx.fillStyle='#e0b0ff';rr(-9,-18,18,3,1);ctx.fill()}
+    if(a.id==='biscuit'){ctx.fillStyle='#fff';rr(-9,-19,18,13,4);ctx.fill()}
+    if(a.id==='olive'){ctx.strokeStyle='#8a6a3c';ctx.lineWidth=1.6;ctx.beginPath();ctx.arc(-5,-36,6,0,7);ctx.arc(5,-36,6,0,7);ctx.stroke()}
+    if(a.id==='shade'){ctx.fillStyle='#d8444f';tri(-5,-26,5,-26,0,-18)}
+    ctx.restore();
+    a.hit=[x,y-28*u,24*u,a.id];
+    if(cam.sel===a.id){ctx.strokeStyle='#ff8fb1';ctx.lineWidth=3;ctx.beginPath();ctx.ellipse(x,y,20*u,9*u,0,0,7);ctx.stroke()}
+    /* name tag */
+    ctx.save();ctx.font='700 '+Math.min(14,Math.max(10,11*k))+'px Nunito,sans-serif';ctx.textAlign='center';
+    var tw=ctx.measureText(a.name).width+10;ctx.fillStyle='rgba(255,253,248,.92)';rr2(x-tw/2,y-69*u-6,tw,15,7);ctx.fill();
+    ctx.fillStyle=a.sample?'#4a3b52':'#2f6be0';ctx.fillText(a.name,x,y-69*u+5);ctx.restore();
+  }});
+}
+function rr(x,y,w,h,r){ctx.beginPath();ctx.moveTo(x+r,y);ctx.arcTo(x+w,y,x+w,y+h,r);ctx.arcTo(x+w,y+h,x,y+h,r);ctx.arcTo(x,y+h,x,y,r);ctx.arcTo(x,y,x+w,y,r);ctx.closePath()}
+function rr2(x,y,w,h,r){rr(x,y,w,h,r)}
+function tri(a,b,c,d,e,f){ctx.beginPath();ctx.moveTo(a,b);ctx.lineTo(c,d);ctx.lineTo(e,f);ctx.closePath();ctx.fill()}
+function star(cx,cy,r){ctx.beginPath();for(var i=0;i<10;i++){var rad=i%2?r*.45:r,an=-Math.PI/2+i*Math.PI/5;ctx.lineTo(cx+Math.cos(an)*rad,cy+Math.sin(an)*rad)}ctx.closePath();ctx.fill()}
+
+/* ---------- update (decorative idle life only) ---------- */
+function update(dt){
+  agents.forEach(function(a){
+    if(reduce){return}
+    if(a.wait>0){a.wait-=dt;a.moving=false;return}
+    var tgt=a.path[a.pi],dx=tgt[0]-a.px,dy=tgt[1]-a.py,dist=Math.hypot(dx,dy);
+    if(dist<.05){a.pi=(a.pi+1)%a.path.length;a.wait=1.5+Math.random()*3;a.moving=false;return}
+    a.moving=true;a.dir=Math.max(-2,Math.min(2,(dx-dy)*3));
+    a.px+=dx/dist*a.spd*dt*2;a.py+=dy/dist*a.spd*dt*2;
+  });
+}
+
+/* ---------- frame ---------- */
+var hits=[];
+function frame(ts){
+  var t=ts/1000;if(!frame.l)frame.l=t;var dt=Math.min(.05,t-frame.l);frame.l=t;
+  update(dt);
+  var e=1-Math.pow(.0015,dt);cam.zoom+=(cam.tz-cam.zoom)*e;cam.px+=(cam.tpx-cam.px)*e;cam.py+=(cam.tpy-cam.py)*e;
+  ctx.setTransform(dpr,0,0,dpr,0,0);ctx.clearRect(0,0,vw,vh);
+  Q=[];
+  var sel=cam.sel,denOn=sel==='den'||sel==='shade';
+  var dimFor=function(rid){if(rid==='den')return denOn?1:.62;if(cam.inside&&sel&&roomOf(sel)!==rid)return .8;return 1};
+  /* ground shadow + basement block */
+  var denDim=denOn?1:.62;
+  /* floor: basement first, then slab */
+  var base={x:6,y:4,w:10,h:6,c:['#3b3550','#352f49'],wall:'#2b2640'};
+  var zb=-5;
+  walls(base,denDim,zb,3.4);
+  Q.sort(function(a,b){return a.d-b.d});
+  var wallsQ=Q;Q=[];
+  /* draw order: den floor+walls, den objects, slab+tiles, main */
+  ctx.save();
+  var bg=ctx.createLinearGradient(0,vh*.5,0,vh);bg.addColorStop(0,'rgba(0,0,0,0)');bg.addColorStop(1,'rgba(70,50,90,.25)');
+  ctx.restore();
+  tiles(base,denDim,zb);
+  wallsQ.forEach(function(q){q.f()});
+  denStuff(denDim);
+  var den=agentById.shade;drawChar(den,t);
+  Q.sort(function(a,b){return a.d-b.d});Q.forEach(function(q){q.f()});Q=[];
+  /* den glow */
+  if(denOn){var g=P.apply(null,rotXY(13,9).concat([-4]));var gr=ctx.createRadialGradient(g[0],g[1],4,g[0],g[1],160*cam.zoom);gr.addColorStop(0,'rgba(255,214,120,.45)');gr.addColorStop(1,'rgba(255,214,120,0)');ctx.fillStyle=gr;ctx.fillRect(0,0,vw,vh)}
+  /* slab (roof of den) */
+  (function(){var a=rotXY(0,0),b=rotXY(W,D),rx=Math.min(a[0],b[0]),ry=Math.min(a[1],b[1]),rw=Math.abs(a[0]-b[0]),rd=Math.abs(a[1]-b[1]);
+    poly([P(rx,ry+rd,0),P(rx+rw,ry+rd,0),P(rx+rw,ry+rd,-.7),P(rx,ry+rd,-.7)],'#e8cfae');
+    poly([P(rx+rw,ry,0),P(rx+rw,ry+rd,0),P(rx+rw,ry+rd,-.7),P(rx+rw,ry,-.7)],'#d5b78f');
+    /* hide den under main floor except front: cover with floor */
+  })();
+  rooms.forEach(function(r){if(!r.basement)tiles(r,dimFor(r.id),0)});
+  /* selected room outline */
+  if(sel&&roomById[roomOf(sel)]){var rm=roomById[roomOf(sel)];if(!rm.basement){var c=[[rm.x,rm.y],[rm.x+rm.w,rm.y],[rm.x+rm.w,rm.y+rm.h],[rm.x,rm.y+rm.h]].map(function(p){return PW(p[0],p[1],.02)});
+    ctx.beginPath();c.forEach(function(p,i){i?ctx.lineTo(p[0],p[1]):ctx.moveTo(p[0],p[1])});ctx.closePath();ctx.lineWidth=3.5;ctx.strokeStyle='#ff8fb1';ctx.setLineDash([8,6]);ctx.stroke();ctx.setLineDash([])}}
+  rooms.forEach(function(r){if(!r.basement)walls(r,dimFor(r.id),0,1.7)});
+  furniture(dimFor);
+  agents.forEach(function(a){if(a.id!=='shade')drawChar(a,t)});
+  Q.sort(function(a,b){return a.d-b.d});
+  hits=[];Q.forEach(function(q){q.f()});
+  agents.forEach(function(a){if(a.hit)hits.push(a.hit)});
+  /* room labels */
+  rooms.forEach(function(r){
+    var cx=r.x+r.w/2,cy=r.y+(r.basement?r.h-.3:.5);var z=r.basement?-4.6:2.4;
+    var p=PW(cx,cy,z);var s=r.name;ctx.save();ctx.font='600 '+Math.min(15,Math.max(10,12*cam.zoom))+'px Fredoka,sans-serif';ctx.textAlign='center';
+    var w=ctx.measureText(s).width+14;ctx.fillStyle=cam.sel===r.id?'#ffc3d0':'rgba(255,253,248,.9)';rr(p[0]-w/2,p[1]-10,w,20,10);ctx.fill();ctx.fillStyle='#4a3b52';ctx.fillText(s,p[0],p[1]+4);ctx.restore();r.lab=[p[0],p[1],w/2];
+  });
+  /* warm light */
+  var wl=ctx.createRadialGradient(vw*.3,vh*.1,10,vw*.3,vh*.1,Math.max(vw,vh));wl.addColorStop(0,'rgba(255,220,150,.28)');wl.addColorStop(1,'rgba(255,200,170,0)');ctx.fillStyle=wl;ctx.fillRect(0,0,vw,vh);
+  requestAnimationFrame(frame);
+}
+function roomOf(id){if(roomById[id])return id;var a=agentById[id];return a?a.room:null}
+
+/* ---------- panel ---------- */
+function esc(s){return String(s).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]})}
+function chipsHtml(){return '<div class="chips">'+rooms.map(function(r){return '<button class="chip" data-room="'+r.id+'" aria-pressed="'+(roomOf(cam.sel)===r.id)+'">'+esc(r.name)+'</button>'}).join('')+'</div>'}
+function render(){
+  var sel=cam.sel,h='';
+  if(!sel){h='<h2>Welcome to the office</h2><p class="sub">Click a character or a room.</p><div class="box">This is a <b>mockup</b>. Every agent here is a <b>sample character</b>. Nothing is connected, so no task is real and nobody is actually working.</div><div class="box">Drag with the <b>right mouse button</b> to pan. Scroll to zoom. On a phone, drag with one finger.</div>'+chipsHtml();}
+  else if(agentById[sel]){var a=agentById[sel],ri=roomById[a.room];
+    h='<h2>'+esc(a.name)+(a.who!=='person'?' the '+esc(a.who):'')+'</h2><p class="sub">'+esc(a.role)+'</p>'+
+    '<dl class="kv"><dt>Room</dt><dd>'+esc(ri.name)+'</dd><dt>Outfit</dt><dd>'+esc(a.id==='me'?'Blue blazer, gold star lanyard':a.id==='mochi'?'Lab coat, lilac belt':a.id==='bun'?'Mint cardigan':a.id==='olive'?'Mustard vest, round glasses':a.id==='biscuit'?'Apron':a.id==='juniper'?'Pink raincoat':'Red scarf, glowing eyes')+'</dd><dt>Data</dt><dd>'+(a.sample?'Sample character':'You')+'</dd></dl>'+
+    '<div class="box">'+esc(a.ctx)+'</div>'+
+    (a.task?'<div class="box warn"><b>Task status:</b> not available.<br>'+esc(a.task)+' is an example only. No agent connection exists, so I cannot show real progress.</div>':'<div class="box">No task status for this character.</div>')+
+    '<div class="box">Walking and idling you see is <b>decorative</b>. It is never shown as verified work.</div>'+chipsHtml();}
+  else{var r=roomById[sel],i=roomInfo[sel];
+    h='<h2>'+esc(r.name)+'</h2><p class="sub">'+esc(r.kind)+'</p><div class="box">'+esc(i.ctx)+'</div>'+(i.files?'<div class="box">'+esc(i.files)+'</div>':'')+
+    '<div class="box warn"><b>Task status:</b> not available. No live connection in this mockup.</div>'+chipsHtml();}
+  panel.innerHTML=h+'<p class="foot">Sample data. FASLR facts come from this repository’s README and git log.</p>';
+}
+panel.addEventListener('click',function(e){var b=e.target.closest('.chip');if(b){select(b.dataset.room,true)}});
+function select(id,focus){cam.sel=id;render();if(focus&&cam.inside)goInside(roomOf(id))}
+
+/* ---------- interaction ---------- */
+function rect(){return cv.getBoundingClientRect()}
+function pick(sx,sy){
+  for(var i=0;i<hits.length;i++){var h=hits[i];if(Math.abs(sx-h[0])<h[2]*.55&&sy>h[1]-h[2]*.3&&sy<h[1]+h[2]*2.1)return h[3]}
+  var w=screenToWorld(sx,sy),wx=w[0],wy=w[1];
+  if(wx>=0&&wx<W&&wy>=0&&wy<D){for(var j=0;j<rooms.length;j++){var r=rooms[j];if(!r.basement&&wx>=r.x&&wx<r.x+r.w&&wy>=r.y&&wy<r.y+r.h)return r.id}}
+  for(var k=0;k<rooms.length;k++){var l=rooms[k].lab;if(l&&rooms[k].basement&&Math.abs(sx-l[0])<l[2]&&Math.abs(sy-l[1])<12)return 'den'}
+  return null;
+}
+var drag=null;
+cv.addEventListener('contextmenu',function(e){e.preventDefault()});
+cv.addEventListener('pointerdown',function(e){var r=rect();drag={x:e.clientX,y:e.clientY,px:cam.tpx,py:cam.tpy,moved:false,sx:e.clientX-r.left,sy:e.clientY-r.top,btn:e.button};cv.setPointerCapture(e.pointerId)});
+cv.addEventListener('pointermove',function(e){if(!drag)return;var dx=e.clientX-drag.x,dy=e.clientY-drag.y;if(Math.abs(dx)+Math.abs(dy)>5)drag.moved=true;if(drag.moved){cam.tpx=drag.px+dx;cam.tpy=drag.py+dy;cam.px=cam.tpx;cam.py=cam.tpy}});
+cv.addEventListener('pointerup',function(e){if(drag&&!drag.moved&&drag.btn===0){var id=pick(drag.sx,drag.sy);select(id,true)}drag=null});
+cv.addEventListener('wheel',function(e){e.preventDefault();var f=e.deltaY<0?1.12:1/1.12;zoomBy(f)},{passive:false});
+function zoomBy(f){cam.tz=Math.max(.35,Math.min(4,cam.tz*f))}
+function rot(d){cam.rot=(cam.rot+d+4)%4}
+document.getElementById('rotL').onclick=function(){rot(-1)};
+document.getElementById('rotR').onclick=function(){rot(1)};
+document.getElementById('zin').onclick=function(){zoomBy(1.25)};
+document.getElementById('zout').onclick=function(){zoomBy(.8)};
+var insideBtn=document.getElementById('inside'),dpad=document.getElementById('dpad');
+function goInside(rid){
+  var r=roomById[rid||'faslr'];if(!r)return;if(r.basement){r=roomById.arcade}
+  cam.inside=true;insideBtn.textContent='Whole office';insideBtn.setAttribute('aria-pressed','true');dpad.classList.add('on');
+  cam.focus=r.id;cam.tz=Math.min(2.4,fitZoom()*2.2);
+  var z0=cam.zoom;cam.zoom=cam.tz;cam.px=0;cam.py=0;var p=PW(r.x+r.w/2,r.y+r.h/2,0);cam.zoom=z0;
+  cam.tpx=vw/2-p[0]+0;cam.tpy=vh*.5-p[1]+0;
+  /* recompute at target zoom */
+  var s=cam.tz;var saved=cam.zoom;cam.zoom=s;var pp=PW(r.x+r.w/2,r.y+r.h/2,0);cam.zoom=saved;cam.tpx=vw/2-pp[0];cam.tpy=vh*.5-pp[1];
+  if(!cam.sel||roomOf(cam.sel)!==r.id)cam.sel=r.id;render();
+}
+function goOutside(){cam.inside=false;insideBtn.textContent='Step inside';insideBtn.setAttribute('aria-pressed','false');dpad.classList.remove('on');cam.tz=fitZoom();cam.tpx=0;cam.tpy=0}
+insideBtn.onclick=function(){cam.inside?goOutside():goInside(roomOf(cam.sel)||'faslr')};
+dpad.addEventListener('click',function(e){var b=e.target.closest('button');if(!b||!cam.inside)return;
+  var cur=roomById[cam.focus||'faslr'],dx=0,dy=0,d=b.dataset.d;
+  /* arrows follow the screen: up/right/left/down in rotated view map back to world */
+  var vx=d==='r'?1:d==='l'?-1:0,vy=d==='d'?1:d==='u'?-1:0;
+  var a=unrot(vx+vy*0,vy*0);var o=unrot(0,0);
+  /* screen right = +x'-y' ; screen down = +x'+y' */
+  var sx=vx-vy*0,sy=vy;var rx=(vx+vy)/1,ry=(vy-vx)/1;
+  var w=unrot(rx,ry),w0=unrot(0,0);dx=Math.sign(Math.round(w[0]-w0[0]));dy=Math.sign(Math.round(w[1]-w0[1]));
+  var cx=cur.x+cur.w/2+dx*(cur.w/2+1),cy=cur.y+cur.h/2+dy*(cur.h/2+1);
+  var next=null;rooms.forEach(function(r){if(!r.basement&&cx>=r.x&&cx<r.x+r.w&&cy>=r.y&&cy<r.y+r.h)next=r});
+  if(next&&next.id!==cur.id)goInside(next.id);
+});
+document.addEventListener('keydown',function(e){if(!cam.inside)return;var m={ArrowUp:'u',ArrowDown:'d',ArrowLeft:'l',ArrowRight:'r'}[e.key];if(m){var b=dpad.querySelector('[data-d='+m+']');b.click();e.preventDefault()}});
+
+window.addEventListener('resize',resize);
+resize();render();requestAnimationFrame(frame);
+})();
+</script>
